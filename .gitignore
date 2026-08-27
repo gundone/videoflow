@@ -1,0 +1,40 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.vs/
+.vscode/
+*.DotSettings.user
+*.csproj.user
+
+## NuGet
+**/[Pp]ackages/*
+!**/[Pp]ackages/build/
+*.nupkg
+**/[Pp]ackages/repositories.config
+packages/
+
+## JetBrains
+.idea/
+*.sln.DotSettings
+*.DotSettings
+
+## Secrets
+**/appsettings.*.local.json
+**/secrets.json
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Build
+[Bb]uild/
+[Dd]ebug/
+[Rr]elease/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
