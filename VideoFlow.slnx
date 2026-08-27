@@ -1,6 +1,8 @@
 <Solution>
   <Folder Name="/src/">
     <File Path="docker-compose.yml" />
+    <Project Path="src/Api/VideoFlow.Api.csproj" />
     <Project Path="src/AuthService/AuthService.csproj" />
+    <Project Path="src/UploadService/UploadService.csproj" />
   </Folder>
 </Solution>

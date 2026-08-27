@@ -21,4 +21,8 @@
     <PackageReference Include="Ulid" Version="1.4.1" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Api\VideoFlow.Api.csproj" />
+  </ItemGroup>
+ 
 </Project>

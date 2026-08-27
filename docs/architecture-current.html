@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VideoFlow — Current Architecture</title>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'JetBrains Mono', monospace; background: #020617; min-height: 100vh; padding: 2rem; color: white; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .header { margin-bottom: 2rem; }
+    .header-row { display: flex; align-items: center; gap: 1rem; margin-bottom: 0.5rem; }
+    .pulse-dot { width: 12px; height: 12px; background: #22d3ee; border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    h1 { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.025em; }
+    .subtitle { color: #94a3b8; font-size: 0.875rem; margin-left: 1.75rem; }
+    .diagram-container { background: rgba(15, 23, 42, 0.5); border-radius: 1rem; border: 1px solid #1e293b; padding: 1.5rem; overflow-x: auto; }
+    svg { width: 100%; min-width: 900px; display: block; }
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-top: 2rem; }
+    .card { background: rgba(15, 23, 42, 0.5); border-radius: 0.75rem; border: 1px solid #1e293b; padding: 1.25rem; }
+    .card-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.75rem; }
+    .card-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .card-dot.cyan { background: #22d3ee; }
+    .card-dot.emerald { background: #34d399; }
+    .card-dot.violet { background: #a78bfa; }
+    .card-dot.amber { background: #fbbf24; }
+    .card-dot.rose { background: #fb7185; }
+    .card h3 { font-size: 0.875rem; font-weight: 600; }
+    .card ul { list-style: none; color: #94a3b8; font-size: 0.75rem; }
+    .card li { margin-bottom: 0.375rem; }
+    .footer { text-align: center; margin-top: 1.5rem; color: #475569; font-size: 0.75rem; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-row">
+        <div class="pulse-dot"></div>
+        <h1>VideoFlow — Current Architecture</h1>
+      </div>
+      <p class="subtitle">Implemented: AuthService (JWT+JWKS) + UploadService (presigned S3) + React Frontend</p>
+    </div>
+
+    <div class="diagram-container">
+      <svg viewBox="0 0 1000 620">
+        <defs>
+          <marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#64748b" />
+          </marker>
+          <marker id="arrow-auth" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <polygon points="0 0, 10 3.5, 0 7" fill="#fb7185" />
+          </marker>
+          <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+            <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#1e293b" stroke-width="0.5"/>
+          </pattern>
+        </defs>
+
+        <rect width="100%" height="100%" fill="url(#grid)" />
+
+        <!-- ==================== LEGEND ==================== -->
+        <text x="720" y="40" fill="white" font-size="10" font-weight="600">Legend</text>
+        <rect x="720" y="50" width="14" height="10" rx="2" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="1"/>
+        <text x="740" y="58" fill="#94a3b8" font-size="8">Frontend</text>
+        <rect x="720" y="66" width="14" height="10" rx="2" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="1"/>
+        <text x="740" y="74" fill="#94a3b8" font-size="8">Backend</text>
+        <rect x="720" y="82" width="14" height="10" rx="2" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="1"/>
+        <text x="740" y="90" fill="#94a3b8" font-size="8">Database</text>
+        <rect x="720" y="98" width="14" height="10" rx="2" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1"/>
+        <text x="740" y="106" fill="#94a3b8" font-size="8">Message Bus</text>
+        <rect x="720" y="114" width="14" height="10" rx="2" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="1"/>
+        <text x="740" y="122" fill="#94a3b8" font-size="8">S3 Storage</text>
+        <rect x="720" y="130" width="14" height="10" rx="2" fill="rgba(136, 19, 55, 0.4)" stroke="#fb7185" stroke-width="1"/>
+        <text x="740" y="138" fill="#94a3b8" font-size="8">Security</text>
+        <line x1="720" y1="150" x2="734" y2="150" stroke="#fb7185" stroke-width="1" stroke-dasharray="4,4"/>
+        <text x="740" y="153" fill="#94a3b8" font-size="8">Auth Flow</text>
+
+        <!-- ==================== DOCKER BOUNDARY ==================== -->
+        <rect x="50" y="380" width="640" height="210" rx="12" fill="rgba(251, 191, 36, 0.04)" stroke="#fbbf24" stroke-width="1" stroke-dasharray="8,4"/>
+        <text x="62" y="398" fill="#fbbf24" font-size="10" font-weight="600">Docker — shared infrastructure</text>
+
+        <!-- ==================== BROWSER (FRONTEND) ==================== -->
+        <rect x="380" y="40" width="160" height="70" rx="8" fill="rgba(8, 51, 68, 0.4)" stroke="#22d3ee" stroke-width="2"/>
+        <text x="460" y="65" fill="white" font-size="12" font-weight="600" text-anchor="middle">React SPA</text>
+        <text x="460" y="82" fill="#94a3b8" font-size="9" text-anchor="middle">TypeScript + Vite</text>
+        <text x="460" y="98" fill="#22d3ee" font-size="8" text-anchor="middle">localhost:5173</text>
+
+        <!-- ==================== AUTHSERVICE ==================== -->
+        <rect x="160" y="200" width="160" height="70" rx="8" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="2"/>
+        <text x="240" y="225" fill="white" font-size="12" font-weight="600" text-anchor="middle">AuthService</text>
+        <text x="240" y="242" fill="#94a3b8" font-size="9" text-anchor="middle">ASP.NET Core 10</text>
+        <text x="240" y="258" fill="#34d399" font-size="8" text-anchor="middle">:5251</text>
+
+        <!-- ==================== JWKS INSET ==================== -->
+        <rect x="175" y="285" width="130" height="35" rx="4" fill="transparent" stroke="#fb7185" stroke-width="1" stroke-dasharray="3,3"/>
+        <text x="240" y="302" fill="#fb7185" font-size="9" text-anchor="middle" font-weight="500">/.well-known/jwks.json</text>
+        <text x="240" y="314" fill="#fb7185" font-size="7" text-anchor="middle">RSA-256 Public Key</text>
+
+        <!-- ==================== UPLOADSERVICE ==================== -->
+        <rect x="580" y="200" width="160" height="70" rx="8" fill="rgba(6, 78, 59, 0.4)" stroke="#34d399" stroke-width="2"/>
+        <text x="660" y="225" fill="white" font-size="12" font-weight="600" text-anchor="middle">UploadService</text>
+        <text x="660" y="242" fill="#94a3b8" font-size="9" text-anchor="middle">ASP.NET Core 10</text>
+        <text x="660" y="258" fill="#34d399" font-size="8" text-anchor="middle">:5009</text>
+
+        <!-- ==================== POSTGRESQL ==================== -->
+        <rect x="130" y="440" width="130" height="50" rx="6" fill="rgba(76, 29, 149, 0.4)" stroke="#a78bfa" stroke-width="2"/>
+        <text x="195" y="463" fill="white" font-size="11" font-weight="600" text-anchor="middle">PostgreSQL</text>
+        <text x="195" y="479" fill="#94a3b8" font-size="8" text-anchor="middle">videoflow_auth</text>
+
+        <!-- ==================== MINIO ==================== -->
+        <rect x="580" y="440" width="130" height="50" rx="6" fill="rgba(120, 53, 15, 0.3)" stroke="#fbbf24" stroke-width="2"/>
+        <text x="645" y="463" fill="white" font-size="11" font-weight="600" text-anchor="middle">MinIO (S3)</text>
+        <text x="645" y="479" fill="#94a3b8" font-size="8" text-anchor="middle">videos bucket</text>
+
+        <!-- ==================== REDIS ==================== -->
+        <rect x="130" y="520" width="100" height="40" rx="6" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1.5"/>
+        <text x="180" y="538" fill="white" font-size="10" font-weight="500" text-anchor="middle">Redis</text>
+        <text x="180" y="550" fill="#94a3b8" font-size="7" text-anchor="middle">cache</text>
+
+        <!-- ==================== KAFKA ==================== -->
+        <rect x="520" y="520" width="100" height="40" rx="6" fill="rgba(251, 146, 60, 0.3)" stroke="#fb923c" stroke-width="1.5"/>
+        <text x="570" y="538" fill="white" font-size="10" font-weight="500" text-anchor="middle">Kafka</text>
+        <text x="570" y="550" fill="#94a3b8" font-size="7" text-anchor="middle">(KRaft)</text>
+
+        <!-- ==================== ARROWS ==================== -->
+
+        <!-- Browser → AuthService (login/register) -->
+        <path d="M 460 110 L 460 150 Q 460 170 440 170 L 320 170 Q 280 170 280 195" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <text x="370" y="160" fill="#94a3b8" font-size="9">POST /api/auth/*</text>
+        <text x="370" y="172" fill="#94a3b8" font-size="8">register / login</text>
+
+        <!-- AuthService → Browser (JWT response) - dashed auth flow -->
+        <path d="M 280 270 L 280 290 Q 280 310 300 310 L 460 310 L 460 115" fill="none" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow-auth)"/>
+        <text x="370" y="304" fill="#fb7185" font-size="9">JWT (RS256 + JWKS)</text>
+
+        <!-- Browser → UploadService (request presigned URL) -->
+        <path d="M 500 110 L 500 140 Q 500 160 520 160 L 600 160 Q 660 160 660 195" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <text x="580" y="150" fill="#94a3b8" font-size="9">POST /api/upload/request</text>
+
+        <!-- UploadService → Browser (presigned URL response) -->
+        <path d="M 660 270 L 660 300 Q 660 320 640 320 L 500 320 Q 480 320 480 115" fill="none" stroke="#22d3ee" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <text x="570" y="316" fill="#94a3b8" font-size="9">{ uploadUrl, publicUrl }</text>
+
+        <!-- Browser → MinIO (PUT file via presigned URL) -->
+        <path d="M 460 110 L 460 400 Q 460 430 580 440" fill="none" stroke="#fbbf24" stroke-width="2" marker-end="url(#arrow)"/>
+        <text x="475" y="390" fill="#fbbf24" font-size="9">PUT file (direct upload)</text>
+        <text x="475" y="403" fill="#94a3b8" font-size="8">XMLHttpRequest + onprogress</text>
+
+        <!-- AuthService → PostgreSQL -->
+        <line x1="240" y1="270" x2="240" y2="390" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <line x1="240" y1="390" x2="195" y2="438" stroke="#a78bfa" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <text x="258" y="400" fill="#a78bfa" font-size="8">EF Core / Dapper</text>
+
+        <!-- UploadService → MinIO (presigned URL generation) -->
+        <line x1="660" y1="270" x2="660" y2="390" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <line x1="660" y1="390" x2="645" y2="438" stroke="#fbbf24" stroke-width="1.5" marker-end="url(#arrow)"/>
+        <text x="670" y="400" fill="#fbbf24" font-size="8">S3 API</text>
+
+        <!-- UploadService → AuthService JWKS (fetch public key) -->
+        <path d="M 580 235 L 530 235 Q 510 235 510 255 L 510 285 Q 510 295 490 295 L 310 295" fill="none" stroke="#fb7185" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow-auth)"/>
+        <text x="515" y="290" fill="#fb7185" font-size="8">GET JWKS</text>
+      </svg>
+    </div>
+
+    <div class="cards">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot cyan"></div>
+          <h3>Frontend (React SPA)</h3>
+        </div>
+        <ul>
+          <li>• Vite + TypeScript + react-router-dom</li>
+          <li>• Auth: register / login / JWT storage</li>
+          <li>• Upload: presigned URL → direct S3 PUT</li>
+          <li>• Progress bar via XMLHttpRequest</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot emerald"></div>
+          <h3>Backend Services</h3>
+        </div>
+        <ul>
+          <li>• AuthService: JWT (RSA-256) + refresh token hash + BCrypt</li>
+          <li>• AuthService: dual ORM (EF Core / Dapper), ULID IDs</li>
+          <li>• UploadService: presigned S3 URLs for direct upload</li>
+          <li>• Both protect endpoints via JWT Bearer Auth</li>
+        </ul>
+      </div>
+      <div class="card">
+        <div class="card-header">
+          <div class="card-dot amber"></div>
+          <h3>Infrastructure</h3>
+        </div>
+        <ul>
+          <li>• Docker Compose: PostgreSQL, MinIO, Redis, Kafka</li>
+          <li>• MinIO: bucket videos, CORS :5173, HTTP presigned URLs</li>
+          <li>• AuthService publishes JWKS at /.well-known/jwks.json</li>
+          <li>• UploadService validates via JWKS (auto-cached)</li>
+        </ul>
+      </div>
+    </div>
+
+    <p class="footer">VideoFlow • Current implementation as of Aug 2026</p>
+  </div>
+</body>
+</html>

@@ -1,19 +1,21 @@
 ﻿using AuthService.Entities;
-using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
-using System.Text;
+using Microsoft.Extensions.Options;
+using VideoFlow.Api;
 
 namespace AuthService.Services;
 
 public class JwtService : IJwtService
 {
+    private readonly RsaSecurityKey _signingKey;
     private readonly JwtOptions _options;
 
-    public JwtService(IOptions<JwtOptions> options)
+    public JwtService(IOptions<JwtOptions> options, RsaSecurityKey signingKey)
     {
+        _signingKey = signingKey;
         _options = options.Value;
     }
     public string GenerateAccessToken(User user)
@@ -25,13 +27,12 @@ public class JwtService : IJwtService
             new Claim(ClaimTypes.Role, user.Role)
         };
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_options.SecretKey));
         var token = new JwtSecurityToken(
             issuer: _options.Issuer,
             audience: _options.Audience,
             claims: claims,
             expires: DateTime.UtcNow.AddMinutes(_options.AccessTokenExpirationMinutes),
-            signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256));
+            signingCredentials: new SigningCredentials(_signingKey, SecurityAlgorithms.RsaSha256));
 
         return new JwtSecurityTokenHandler().WriteToken(token);
     }
