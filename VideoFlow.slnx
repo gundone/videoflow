@@ -3,6 +3,8 @@
     <File Path="docker-compose.yml" />
     <Project Path="src/Api/VideoFlow.Api.csproj" />
     <Project Path="src/AuthService/AuthService.csproj" />
+    <Project Path="src/Gateway/Gateway.csproj" />
     <Project Path="src/UploadService/UploadService.csproj" />
   </Folder>
+  <Folder Name="/src/Api/" />
 </Solution>

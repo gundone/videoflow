@@ -1,8 +1,6 @@
-using Amazon.S3;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Protocols;
 using Microsoft.IdentityModel.Tokens;
-using UploadService.Services;
 using VideoFlow.Api;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -45,33 +43,27 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
         };
     });
 
-var s3Section = builder.Configuration.GetSection(S3Options.SectionName);
-builder.Services.Configure<S3Options>(s3Section);
+builder.Services.AddReverseProxy()
+    .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
 
-var s3Options = s3Section.Get<S3Options>() ?? throw new InvalidOperationException("s3 configuration is missing");
-
-builder.Services.AddSingleton<IAmazonS3>(_ => new AmazonS3Client(
-    s3Options.AccessKey,
-    s3Options.SecretKey,
-    new AmazonS3Config
-    {
-        ServiceURL = s3Options.ServiceUrl, 
-        UseHttp = true, 
-        ForcePathStyle = true
-    }));
-
-builder.Services.AddSingleton<IStorageService, S3StorageService>();
-builder.Services.AddControllers();
-builder.Services.AddOpenApi();
-
-var app = builder.Build();
-
-if (app.Environment.IsDevelopment())
+// ── CORS ─────────────────────────────────────────────────────────
+var corsOrigins = builder.Configuration
+    .GetSection("Cors:AllowedOrigins")
+    .Get<string[]>() ?? [];
+if (corsOrigins.Length > 0)
 {
-    app.MapOpenApi();
+    builder.Services.AddCors(opts =>
+        opts.AddDefaultPolicy(policy =>
+            policy.WithOrigins(corsOrigins)
+                .AllowAnyHeader()
+                .AllowAnyMethod()));
 }
 
+
+var app = builder.Build();
+app.UseCors();
+app.UseAuthentication();
 app.UseAuthorization();
-app.MapControllers();
+app.MapReverseProxy();
 
 app.Run();

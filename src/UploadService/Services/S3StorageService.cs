@@ -8,54 +8,68 @@ namespace UploadService.Services;
 
 public class S3StorageService : IStorageService
 {
-    private readonly IAmazonS3 _s3;
-    private readonly IOptions<S3Options> _options;
+private readonly IAmazonS3 _s3;
+private readonly IAmazonS3 _presignS3;
+private readonly IOptions<S3Options> _options;
 
-    public S3StorageService(IAmazonS3 s3, IOptions<S3Options> options)
-    {
-        _s3 = s3;
-        _options = options;
-    }
+public S3StorageService(IAmazonS3 s3, IOptions<S3Options> options)
+{
+    _s3 = s3;
+    _options = options;
 
-
-    public async Task<StorageResult> UploadAsync(string filename, Stream content, string contentType, CancellationToken ct = default)
-    {
-        var fileId = Ulid.NewUlid().ToString();
-        var key = $"{fileId}/{filename}";
-
-        var bucket = await GetBucketAsync(0U, ct);
-
-        var response = await _s3.PutObjectAsync(new PutObjectRequest
+    // Separate S3 client for presigned URLs — uses browser-facing hostname (localhost)
+    _presignS3 = new AmazonS3Client(
+        options.Value.AccessKey,
+        options.Value.SecretKey,
+        new AmazonS3Config
         {
-            BucketName = bucket.BucketName,
-            Key = key,
-            InputStream = content,
-            ContentType = contentType,
-            
-        }, ct);
-
-        return new StorageResult(fileId, filename,
-            $"{_options.Value.PublicUrl}/{_options.Value.BucketName}/{key}", content.Length);
-    }
-
-    public async Task<PresignedUploadResult> GeneratePresignedUploadUrlAsync(string filename, string contentType, CancellationToken ct = default)
-    {
-        var fileId = Ulid.NewUlid().ToString();
-        var key = $"{fileId}/{filename}";
-        var bucket = await GetBucketAsync(0U, ct);
-        var expiresAt = DateTime.UtcNow.AddMinutes(_options.Value.UploadTimeoutMinutes);
-        var response = await _s3.GetPreSignedURLAsync(new GetPreSignedUrlRequest
-        {
-            BucketName = bucket.BucketName,
-            Key = key,
-            Verb = HttpVerb.PUT,
-            ContentType = contentType,
-            Expires = expiresAt,
-            Protocol = Protocol.HTTP
+            ServiceURL = options.Value.PublicUrl,
+            UseHttp = true,
+            ForcePathStyle = true
         });
+}
 
-        return new PresignedUploadResult(fileId, response, $"{_options.Value.PublicUrl}/{_options.Value.BucketName}/{key}", expiresAt);
-    }
+
+public async Task<StorageResult> UploadAsync(string filename, Stream content, string contentType, CancellationToken ct = default)
+{
+    var fileId = Ulid.NewUlid().ToString();
+    var key = $"{fileId}/{filename}";
+
+    var bucket = await GetBucketAsync(0U, ct);
+
+    var response = await _s3.PutObjectAsync(new PutObjectRequest
+    {
+        BucketName = bucket.BucketName,
+        Key = key,
+        InputStream = content,
+        ContentType = contentType,
+            
+    }, ct);
+
+    return new StorageResult(fileId, filename,
+        $"{_options.Value.PublicUrl}/{_options.Value.BucketName}/{key}", content.Length);
+}
+
+public async Task<PresignedUploadResult> GeneratePresignedUploadUrlAsync(string filename, string contentType, CancellationToken ct = default)
+{
+    var fileId = Ulid.NewUlid().ToString();
+    var key = $"{fileId}/{filename}";
+    var bucket = await GetBucketAsync(0U, ct);
+    var expiresAt = DateTime.UtcNow.AddMinutes(_options.Value.UploadTimeoutMinutes);
+    var uploadUrl = await _presignS3.GetPreSignedURLAsync(new GetPreSignedUrlRequest
+    {
+        BucketName = bucket.BucketName,
+        Key = key,
+        Verb = HttpVerb.PUT,
+        ContentType = contentType,
+        Expires = expiresAt,
+        Protocol = Protocol.HTTP
+    });
+
+    var publicUrl = $"{_options.Value.PublicUrl}/{_options.Value.BucketName}/{key}";
+        
+    return new PresignedUploadResult(fileId, uploadUrl, publicUrl, expiresAt);
+}
 
     private async Task<S3Bucket> GetBucketAsync(uint depth = 0, CancellationToken ct = default)
     {

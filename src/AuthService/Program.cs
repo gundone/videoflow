@@ -6,7 +6,6 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Security.Cryptography;
-using System.Text;
 using VideoFlow.Api;
 
 
@@ -22,7 +21,7 @@ var jwtOptions = jwtSection.Get<JwtOptions>() ?? throw new InvalidOperationExcep
 var rsa = RSA.Create(2048);
 var signingKey = new RsaSecurityKey(rsa);
 
-builder.Services.AddSingleton<RsaSecurityKey>(signingKey);
+builder.Services.AddSingleton(signingKey);
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(opts =>
@@ -39,19 +38,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew = TimeSpan.Zero
         };
     });
-
-var corsOrigins = builder.Configuration
-    .GetSection("Cors:AllowedOrigins")
-    .Get<string[]>() ?? [];
-
-if (corsOrigins.Length > 0)
-{
-    builder.Services.AddCors(opts =>
-        opts.AddDefaultPolicy(policy =>
-            policy.WithOrigins(corsOrigins)
-                .AllowAnyHeader()
-                .AllowAnyMethod()));
-}
 
 // --Data Layer--
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
@@ -92,7 +78,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseCors();
+
 app.UseAuthentication();
 app.UseAuthorization();
 

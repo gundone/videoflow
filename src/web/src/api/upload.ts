@@ -1,4 +1,4 @@
-const UPLOAD_API = 'http://localhost:5009/api';
+const UPLOAD_API = 'http://localhost:5000/api';
 
 export interface PresignedUploadResult {
   fileId: string;

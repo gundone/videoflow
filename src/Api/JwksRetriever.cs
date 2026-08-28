@@ -1,8 +1,7 @@
 using Microsoft.IdentityModel.Protocols;
-using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 
-namespace UploadService.Services;
+namespace VideoFlow.Api;
 
 /// <summary>
 /// Replaces the removed JsonWebKeySetRetriever from Microsoft.IdentityModel.Protocols.OpenIdConnect 8.x.
